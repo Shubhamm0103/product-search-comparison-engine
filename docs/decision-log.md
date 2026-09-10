@@ -22,3 +22,29 @@ Schema created and verified via `\d products` on 2026-09-11 — all NOT NULL/nul
 
 ### Status
 Accepted
+
+---
+
+## Decision: Use a synthetically generated dataset instead of real product data
+
+### Context
+Search, filtering, sorting, pagination, and indexing experiments all need enough rows to be meaningful. Most publicly available laptop datasets are too small (a few hundred rows) and carry licensing/attribution complexity.
+
+### Decision
+Generate ~5,000 synthetic laptop product records using a Node.js script (`database/generate-seed.js`), using real brand names and real processor families, with prices and specs correlated realistically (higher tier → more RAM/storage → higher price). This data is explicitly labeled as synthetic everywhere it appears (file header comment, this log, and later the README).
+
+### Alternatives considered
+1. Use a real public dataset as-is (too small for meaningful performance experiments).
+2. Use a real dataset "topped up" with synthetic rows (rejected — blurs the line between real and fabricated data, which we want to avoid entirely).
+
+### Why we chose this
+Full control over dataset size and distribution, no licensing concerns, and no risk of ever misrepresenting synthetic data as real, since none of it is claimed to be real in the first place.
+
+### Tradeoffs
+This is not real market data. Any performance or business conclusions drawn from it apply only to this synthetic dataset's characteristics, not real-world laptop pricing/demand.
+
+### Evidence
+Generator run on 2026-09-11 produced exactly 5,000 rows, verified via `SELECT COUNT(*) FROM products;` → 5000. Spot-checked sample rows show plausible brand/spec/price correlation and expected NULLs on optional fields (gpu, screen_size, resolution, etc.).
+
+### Status
+Accepted
