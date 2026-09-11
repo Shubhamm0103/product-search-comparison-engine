@@ -69,3 +69,10 @@ describe('GET /api/products/:id', () => {
     expect(res.body.error).toBe('Invalid product id');
   });
 });
+
+afterAll(async () => {
+  const pool = require('../src/db/pool');
+  const redisClient = require('../src/db/redisClient');
+  await redisClient.quit();
+  await pool.end();
+});
