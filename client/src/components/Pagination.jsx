@@ -6,29 +6,10 @@ function Pagination({ page, pagination, onPageChange }) {
   const hasNext = page < totalPages;
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      margin: '20px 0',
-    }}>
-      <button
-        onClick={() => onPageChange(page - 1)}
-        disabled={!hasPrev}
-        style={{ padding: '6px 12px' }}
-      >
-        Prev
-      </button>
-
+    <div className="pagination">
+      <button onClick={() => onPageChange(page - 1)} disabled={!hasPrev}>Prev</button>
       <span>Page {page} of {totalPages}</span>
-
-      <button
-        onClick={() => onPageChange(page + 1)}
-        disabled={!hasNext}
-        style={{ padding: '6px 12px' }}
-      >
-        Next
-      </button>
+      <button onClick={() => onPageChange(page + 1)} disabled={!hasNext}>Next</button>
     </div>
   );
 }

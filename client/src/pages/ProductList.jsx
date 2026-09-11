@@ -131,18 +131,18 @@ function ProductList() {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1>Product Search & Comparison</h1>
+    <div className="page">
+      <h1 className="page-title">Product Search & Comparison</h1>
 
       <input
+        className="search-input"
         type="text"
         placeholder="Search brand, model, or category..."
         value={searchInput}
         onChange={e => setSearchInput(e.target.value)}
-        style={{ padding: '8px', width: '300px', marginBottom: '20px' }}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="toolbar">
         <Filters filters={{ ...filters, ...priceInputs }} onChange={handleFiltersChange} />
         <SortSelect value={sort} onChange={handleSortChange} />
       </div>
@@ -150,17 +150,14 @@ function ProductList() {
       {loading && <LoadingSpinner label="Loading products..." />}
 
       {!loading && error && (
-        <ErrorMessage
-          message={error}
-          onRetry={() => setReloadToken(t => t + 1)}
-        />
+        <ErrorMessage message={error} onRetry={() => setReloadToken(t => t + 1)} />
       )}
 
       {!loading && !error && products.length === 0 && hasActiveSearchOrFilters && (
         <EmptyState
           title="No products match your search"
           message="Try adjusting your filters or searching for something else."
-          action={<button onClick={clearSearchAndFilters} style={{ padding: '6px 12px' }}>Clear search & filters</button>}
+          action={<button onClick={clearSearchAndFilters}>Clear search & filters</button>}
         />
       )}
 
@@ -172,13 +169,13 @@ function ProductList() {
       )}
 
       {!loading && !error && pagination && products.length > 0 && (
-        <p style={{ color: '#666' }}>
+        <p className="results-count">
           Showing {products.length} of {pagination.total} results
         </p>
       )}
 
       {!loading && !error && products.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="product-grid">
           {products.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}

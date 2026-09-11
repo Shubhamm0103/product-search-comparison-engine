@@ -7,11 +7,7 @@ const SORT_OPTIONS = [
 
 function SortSelect({ value, onChange }) {
   return (
-    <select
-      value={value || 'newest'}
-      onChange={e => onChange(e.target.value)}
-      style={{ padding: '6px' }}
-    >
+    <select className="sort-select" value={value || 'newest'} onChange={e => onChange(e.target.value)}>
       {SORT_OPTIONS.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
       ))}

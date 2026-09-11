@@ -67,7 +67,7 @@ function ComparePage() {
   }, [ids, reloadToken]);
 
   return (
-    <div style={{ padding: '24px', paddingBottom: '80px' }}>
+    <div className="page" style={{ paddingBottom: '80px' }}>
       <Link to="/">&larr; Back to results</Link>
       <h1>Compare Products</h1>
 
@@ -95,7 +95,7 @@ function ComparePage() {
       )}
 
       {!loading && products.length > 0 && (
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <table className="compare-table">
           <thead>
             <tr>
               <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd' }}></th>

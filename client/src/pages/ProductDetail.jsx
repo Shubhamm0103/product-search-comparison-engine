@@ -39,7 +39,7 @@ function ProductDetail() {
   }, [id, reloadToken]);
 
   return (
-    <div style={{ padding: '24px', maxWidth: '600px' }}>
+    <div className="page detail-page">
       <Link to="/">&larr; Back to results</Link>
 
       {loading && <LoadingSpinner label="Loading product..." />}
@@ -55,18 +55,14 @@ function ProductDetail() {
         <div style={{ marginTop: '16px' }}>
           <h1 style={{ marginBottom: '4px' }}>{product.brand} {product.model}</h1>
           <p style={{ color: '#666', marginTop: 0 }}>{product.category}</p>
-
-          <p style={{ fontSize: '1.4em', fontWeight: 'bold' }}>
-            ₹{Number(product.price).toLocaleString('en-IN')}
-          </p>
-
+          <p className="detail-price">₹{Number(product.price).toLocaleString('en-IN')}</p>
           <p>⭐ {product.rating ?? 'N/A'} ({product.review_count} reviews)</p>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+          <table className="detail-table">
             <tbody>
-              <tr><td style={{ padding: '6px 0', color: '#666' }}>Processor</td><td>{product.processor}</td></tr>
-              <tr><td style={{ padding: '6px 0', color: '#666' }}>RAM</td><td>{product.ram_gb}GB</td></tr>
-              <tr><td style={{ padding: '6px 0', color: '#666' }}>Storage</td><td>{product.storage_gb}GB {product.storage_type}</td></tr>
+              <tr><td>Processor</td><td>{product.processor}</td></tr>
+              <tr><td>RAM</td><td>{product.ram_gb}GB</td></tr>
+              <tr><td>Storage</td><td>{product.storage_gb}GB {product.storage_type}</td></tr>
             </tbody>
           </table>
         </div>

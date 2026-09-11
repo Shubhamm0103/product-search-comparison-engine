@@ -7,15 +7,7 @@ function Filters({ filters, onChange }) {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '12px',
-      padding: '16px',
-      border: '1px solid #eee',
-      borderRadius: '8px',
-      marginBottom: '20px',
-    }}>
+    <div className="filters">
       <select value={filters.brand || ''} onChange={e => update('brand', e.target.value || undefined)}>
         <option value="">All Brands</option>
         {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
@@ -31,7 +23,6 @@ function Filters({ filters, onChange }) {
         placeholder="Min Price"
         value={filters.minPrice || ''}
         onChange={e => update('minPrice', e.target.value || undefined)}
-        style={{ width: '110px' }}
       />
 
       <input
@@ -39,7 +30,6 @@ function Filters({ filters, onChange }) {
         placeholder="Max Price"
         value={filters.maxPrice || ''}
         onChange={e => update('maxPrice', e.target.value || undefined)}
-        style={{ width: '110px' }}
       />
 
       <select value={filters.minRam || ''} onChange={e => update('minRam', e.target.value || undefined)}>
@@ -50,9 +40,7 @@ function Filters({ filters, onChange }) {
         <option value="64">64GB+</option>
       </select>
 
-      <button onClick={() => onChange({})} style={{ padding: '4px 12px' }}>
-        Clear Filters
-      </button>
+      <button onClick={() => onChange({})}>Clear Filters</button>
     </div>
   );
 }
