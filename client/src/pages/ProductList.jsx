@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import apiClient from '../api/client';
 import ProductCard from '../components/ProductCard';
 import Filters from '../components/Filters';
+import SortSelect from '../components/SortSelect';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 function ProductList() {
   const [products, setProducts] = useState([]);
@@ -9,6 +13,8 @@ function ProductList() {
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState({});
+  const [sort, setSort] = useState('newest');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -18,7 +24,13 @@ function ProductList() {
     setError(null);
 
     apiClient.get('/products', {
-      params: { q: query || undefined, limit: 20, ...filters },
+      params: {
+        q: query || undefined,
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+        sort,
+        ...filters,
+      },
     })
       .then(res => {
         if (isCancelled) return;
@@ -35,7 +47,12 @@ function ProductList() {
       });
 
     return () => { isCancelled = true; };
-  }, [query, filters]);
+  }, [query, filters, sort, page]);
+
+  // Any time search/filters/sort change, snap back to page 1
+  useEffect(() => {
+    setPage(1);
+  }, [query, filters, sort]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -57,7 +74,10 @@ function ProductList() {
         <button type="submit" style={{ padding: '8px 16px' }}>Search</button>
       </form>
 
-      <Filters filters={filters} onChange={setFilters} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <Filters filters={filters} onChange={setFilters} />
+        <SortSelect value={sort} onChange={setSort} />
+      </div>
 
       {loading && <p>Loading products...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -77,6 +97,8 @@ function ProductList() {
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
+
+      <Pagination page={page} pagination={pagination} onPageChange={setPage} />
     </div>
   );
 }
