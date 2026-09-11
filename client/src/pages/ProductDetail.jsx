@@ -17,7 +17,7 @@ function ProductDetail() {
     apiClient.get(`/products/${id}`)
       .then(res => {
         if (isCancelled) return;
-        setProduct(res.data.data);
+        setProduct(res.data);
       })
       .catch(err => {
         if (isCancelled) return;
