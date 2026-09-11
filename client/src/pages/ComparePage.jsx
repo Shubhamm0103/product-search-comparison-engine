@@ -28,15 +28,20 @@ function ComparePage() {
     setLoading(true);
     setError(null);
 
-    Promise.all(ids.map(id => apiClient.get(`/products/${id}`)))
-      .then(responses => {
+    // Use allSettled instead of all: one bad/missing id shouldn't crash the whole page
+    Promise.allSettled(ids.map(id => apiClient.get(`/products/${id}`)))
+      .then(results => {
         if (isCancelled) return;
-        setProducts(responses.map(res => res.data.data));
-      })
-      .catch(err => {
-        if (isCancelled) return;
-        setError('Failed to load one or more products.');
-        console.error(err);
+        const loaded = results
+          .filter(r => r.status === 'fulfilled')
+          .map(r => r.value.data)
+          .filter(Boolean); // drop any falsy/empty responses defensively
+
+        const failedCount = results.length - loaded.length;
+        if (failedCount > 0) {
+          setError(`${failedCount} selected product(s) could not be loaded (may no longer exist).`);
+        }
+        setProducts(loaded);
       })
       .finally(() => {
         if (!isCancelled) setLoading(false);
@@ -52,9 +57,9 @@ function ComparePage() {
 
       {ids.length === 0 && <p>No products selected. Go back and check "Compare" on a few products.</p>}
       {loading && <p>Loading comparison...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: '#b45309' }}>{error}</p>}
 
-      {!loading && !error && products.length > 0 && (
+      {!loading && products.length > 0 && (
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
             <tr>
@@ -83,6 +88,10 @@ function ComparePage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {!loading && products.length === 0 && ids.length > 0 && (
+        <p>None of the selected products could be loaded.</p>
       )}
     </div>
   );
