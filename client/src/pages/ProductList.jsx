@@ -5,6 +5,9 @@ import ProductCard from '../components/ProductCard';
 import Filters from '../components/Filters';
 import SortSelect from '../components/SortSelect';
 import Pagination from '../components/Pagination';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorMessage from '../components/ErrorMessage';
+import EmptyState from '../components/EmptyState';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const PAGE_SIZE = 20;
@@ -16,6 +19,7 @@ function ProductList() {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const query = searchParams.get('q') || '';
   const sort = searchParams.get('sort') || 'newest';
@@ -26,8 +30,8 @@ function ProductList() {
     if (val) filters[key] = val;
   });
 
-  // Local input state — typing updates this instantly (snappy UI),
-  // but the URL/API only get the debounced version
+  const hasActiveSearchOrFilters = Boolean(query) || Object.keys(filters).length > 0;
+
   const [searchInput, setSearchInput] = useState(query);
   const debouncedSearchInput = useDebouncedValue(searchInput, 400);
 
@@ -37,14 +41,12 @@ function ProductList() {
   });
   const debouncedPriceInputs = useDebouncedValue(priceInputs, 400);
 
-  // When the debounced search value settles, push it to the URL
   useEffect(() => {
     if (debouncedSearchInput === query) return;
     updateParams({ q: debouncedSearchInput || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchInput]);
 
-  // When debounced price values settle, push them to the URL
   useEffect(() => {
     const current = { minPrice: filters.minPrice || '', maxPrice: filters.maxPrice || '' };
     if (
@@ -87,7 +89,7 @@ function ProductList() {
       });
 
     return () => { isCancelled = true; };
-  }, [searchParams]);
+  }, [searchParams, reloadToken]);
 
   function updateParams(updates, resetPage = true) {
     const next = new URLSearchParams(searchParams);
@@ -103,13 +105,11 @@ function ProductList() {
   }
 
   function handleFiltersChange(newFilters) {
-    // brand/category/minRam go straight to the URL (they're discrete selects, no debounce needed)
     updateParams({
       brand: newFilters.brand,
       category: newFilters.category,
       minRam: newFilters.minRam,
     });
-    // price stays in local debounced state
     setPriceInputs({
       minPrice: newFilters.minPrice || '',
       maxPrice: newFilters.maxPrice || '',
@@ -122,6 +122,12 @@ function ProductList() {
 
   function handlePageChange(newPage) {
     updateParams({ page: newPage }, false);
+  }
+
+  function clearSearchAndFilters() {
+    setSearchInput('');
+    setPriceInputs({ minPrice: '', maxPrice: '' });
+    setSearchParams(new URLSearchParams());
   }
 
   return (
@@ -141,26 +147,47 @@ function ProductList() {
         <SortSelect value={sort} onChange={handleSortChange} />
       </div>
 
-      {loading && <p>Loading products...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {loading && <LoadingSpinner label="Loading products..." />}
 
-      {!loading && !error && products.length === 0 && (
-        <p>No products found.</p>
+      {!loading && error && (
+        <ErrorMessage
+          message={error}
+          onRetry={() => setReloadToken(t => t + 1)}
+        />
       )}
 
-      {!loading && !error && pagination && (
+      {!loading && !error && products.length === 0 && hasActiveSearchOrFilters && (
+        <EmptyState
+          title="No products match your search"
+          message="Try adjusting your filters or searching for something else."
+          action={<button onClick={clearSearchAndFilters} style={{ padding: '6px 12px' }}>Clear search & filters</button>}
+        />
+      )}
+
+      {!loading && !error && products.length === 0 && !hasActiveSearchOrFilters && (
+        <EmptyState
+          title="No products available"
+          message="The catalog appears to be empty right now."
+        />
+      )}
+
+      {!loading && !error && pagination && products.length > 0 && (
         <p style={{ color: '#666' }}>
           Showing {products.length} of {pagination.total} results
         </p>
       )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-        {products.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {!loading && !error && products.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {products.map(product => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
 
-      <Pagination page={page} pagination={pagination} onPageChange={handlePageChange} />
+      {!loading && !error && products.length > 0 && (
+        <Pagination page={page} pagination={pagination} onPageChange={handlePageChange} />
+      )}
     </div>
   );
 }

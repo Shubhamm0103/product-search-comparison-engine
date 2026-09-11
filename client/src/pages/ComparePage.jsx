@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useCompare } from '../context/CompareContext';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorMessage from '../components/ErrorMessage';
+import EmptyState from '../components/EmptyState';
 
 const ROWS = [
   { label: 'Price', key: 'price', render: p => `₹${Number(p.price).toLocaleString('en-IN')}`, numeric: true, lowerIsBetter: true },
@@ -29,11 +32,13 @@ function ComparePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (ids.length === 0) {
       setProducts([]);
       setLoading(false);
+      setError(null);
       return;
     }
     let isCancelled = false;
@@ -59,16 +64,26 @@ function ComparePage() {
       });
 
     return () => { isCancelled = true; };
-  }, [ids]);
+  }, [ids, reloadToken]);
 
   return (
     <div style={{ padding: '24px', paddingBottom: '80px' }}>
       <Link to="/">&larr; Back to results</Link>
       <h1>Compare Products</h1>
 
-      {ids.length === 0 && <p>No products selected. Go back and check "Compare" on a few products.</p>}
-      {loading && <p>Loading comparison...</p>}
-      {error && <p style={{ color: '#b45309' }}>{error}</p>}
+      {ids.length === 0 && (
+        <EmptyState
+          title="Nothing to compare yet"
+          message='Go back to the results and check "Compare" on 2–4 products.'
+          action={<Link to="/"><button style={{ padding: '6px 12px' }}>Browse products</button></Link>}
+        />
+      )}
+
+      {loading && <LoadingSpinner label="Loading comparison..." />}
+
+      {!loading && error && (
+        <ErrorMessage message={error} onRetry={() => setReloadToken(t => t + 1)} />
+      )}
 
       {!loading && products.length > 1 && (
         <p style={{ color: '#666', fontSize: '0.9em' }}>
@@ -129,8 +144,11 @@ function ComparePage() {
         </table>
       )}
 
-      {!loading && products.length === 0 && ids.length > 0 && (
-        <p>None of the selected products could be loaded.</p>
+      {!loading && !error && products.length === 0 && ids.length > 0 && (
+        <EmptyState
+          title="Nothing could be loaded"
+          message="None of the selected products could be loaded — they may have been removed."
+        />
       )}
     </div>
   );

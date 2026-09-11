@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import apiClient from '../api/client';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorMessage from '../components/ErrorMessage';
 
 function ProductDetail() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -33,14 +36,20 @@ function ProductDetail() {
       });
 
     return () => { isCancelled = true; };
-  }, [id]);
+  }, [id, reloadToken]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '600px' }}>
       <Link to="/">&larr; Back to results</Link>
 
-      {loading && <p>Loading product...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {loading && <LoadingSpinner label="Loading product..." />}
+
+      {!loading && error && (
+        <ErrorMessage
+          message={error}
+          onRetry={error.includes('not found') ? undefined : () => setReloadToken(t => t + 1)}
+        />
+      )}
 
       {!loading && !error && product && (
         <div style={{ marginTop: '16px' }}>
