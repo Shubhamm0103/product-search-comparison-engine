@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../api/client';
 import ProductCard from '../components/ProductCard';
+import Filters from '../components/Filters';
 
 function ProductList() {
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,7 +17,9 @@ function ProductList() {
     setLoading(true);
     setError(null);
 
-    apiClient.get('/products', { params: { q: query || undefined, limit: 20 } })
+    apiClient.get('/products', {
+      params: { q: query || undefined, limit: 20, ...filters },
+    })
       .then(res => {
         if (isCancelled) return;
         setProducts(res.data.data);
@@ -31,7 +35,7 @@ function ProductList() {
       });
 
     return () => { isCancelled = true; };
-  }, [query]);
+  }, [query, filters]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -52,6 +56,8 @@ function ProductList() {
         />
         <button type="submit" style={{ padding: '8px 16px' }}>Search</button>
       </form>
+
+      <Filters filters={filters} onChange={setFilters} />
 
       {loading && <p>Loading products...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
