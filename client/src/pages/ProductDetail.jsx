@@ -1,0 +1,69 @@
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import apiClient from '../api/client';
+
+function ProductDetail() {
+  const { id } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    setLoading(true);
+    setError(null);
+    setProduct(null);
+
+    apiClient.get(`/products/${id}`)
+      .then(res => {
+        if (isCancelled) return;
+        setProduct(res.data.data);
+      })
+      .catch(err => {
+        if (isCancelled) return;
+        setError(
+          err.response?.status === 404
+            ? 'Product not found.'
+            : 'Failed to load product. Is the backend server running?'
+        );
+        console.error(err);
+      })
+      .finally(() => {
+        if (!isCancelled) setLoading(false);
+      });
+
+    return () => { isCancelled = true; };
+  }, [id]);
+
+  return (
+    <div style={{ padding: '24px', maxWidth: '600px' }}>
+      <Link to="/">&larr; Back to results</Link>
+
+      {loading && <p>Loading product...</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      {!loading && !error && product && (
+        <div style={{ marginTop: '16px' }}>
+          <h1 style={{ marginBottom: '4px' }}>{product.brand} {product.model}</h1>
+          <p style={{ color: '#666', marginTop: 0 }}>{product.category}</p>
+
+          <p style={{ fontSize: '1.4em', fontWeight: 'bold' }}>
+            ₹{Number(product.price).toLocaleString('en-IN')}
+          </p>
+
+          <p>⭐ {product.rating ?? 'N/A'} ({product.review_count} reviews)</p>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+            <tbody>
+              <tr><td style={{ padding: '6px 0', color: '#666' }}>Processor</td><td>{product.processor}</td></tr>
+              <tr><td style={{ padding: '6px 0', color: '#666' }}>RAM</td><td>{product.ram_gb}GB</td></tr>
+              <tr><td style={{ padding: '6px 0', color: '#666' }}>Storage</td><td>{product.storage_gb}GB {product.storage_type}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ProductDetail;
