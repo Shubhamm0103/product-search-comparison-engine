@@ -1,5 +1,12 @@
 # Engineering Decision Log
 
+This log records real architectural and implementation decisions made while building
+this project, in chronological order. Each entry includes the context, the decision,
+alternatives considered, and — where applicable — actual evidence (query plans, test
+output, benchmarks) rather than assumptions. This file exists so that any technical
+decision in this project can be explained with reasoning and proof, not just recall.
+
+
 ## Decision: Nullable vs NOT NULL columns in the products schema
 
 ### Context
