@@ -101,3 +101,29 @@ Supertest against an in-memory app is faster and more reliable than spinning up 
 
 ### Status
 Accepted
+
+---
+
+## Decision: Indexing strategy based on EXPLAIN ANALYZE evidence
+
+### Context
+Needed to determine which columns actually benefit from indexing for our real query patterns (brand filter, RAM+price combined filter/sort, category search, price sort), rather than indexing speculatively.
+
+### Decision
+Added four indexes: `idx_products_brand` (equality filter), `idx_products_category` (category lookups), `idx_products_price` (sort-heavy queries), and a composite `idx_products_ram_price` (ram_gb, price) intended for our combined filter+sort pattern.
+
+### Evidence (real EXPLAIN ANALYZE output, 5000-row table)
+- `brand = 'Dell'`: planner chose `Bitmap Heap Scan` via `idx_products_brand` on its own (604/5000 rows matched — selective enough). Execution time 1.888ms.
+- `ram_gb >= 16 ORDER BY price ASC LIMIT 20`: planner used `idx_products_price` alone, NOT the composite `idx_products_ram_price` — because with `LIMIT 20`, walking the price index in order and filtering `ram_gb` as it goes was cheaper than using the composite index. Execution time 0.806ms.
+- `category ILIKE '%gaming%'`: still `Seq Scan`, 5.868ms — confirmed a plain B-tree index cannot support a leading-wildcard ILIKE. This is a structural limitation, not a missing index; fixing it would require `pg_trgm` (trigram) indexing or full-text search, which we deliberately did not add — out of scope for this project's stated goals, and noted here as an explicit, known limitation rather than an oversight.
+- `ORDER BY price DESC LIMIT 20`: `Index Scan Backward` via `idx_products_price`, 0.408ms — fastest of all four.
+- Forcing `enable_seqscan = off` on the brand query changed almost nothing (1.334ms vs 1.888ms), confirming the planner's default choice was already optimal — not evidence the index made a dramatic difference on this small table, just confirmation it was already being used correctly.
+
+### Why we chose this
+Indexes were added based on real query shapes from `productService.js`, not guessed. The composite index not being used is a genuine, useful finding (documented instead of hidden) — it demonstrates the planner picks execution paths dynamically based on `LIMIT`/selectivity, not just "does an index exist."
+
+### Tradeoffs
+Every index adds a small write-time cost (index maintenance on INSERT/UPDATE) — acceptable here since this is a read-heavy search app.
+
+### Status
+Accepted — with `idx_products_ram_price`'s actual usefulness flagged for further investigation in Phase 23.

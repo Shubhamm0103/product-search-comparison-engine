@@ -19,3 +19,8 @@ CREATE TABLE products (
     stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+-- Indexes added in Phase 22 based on EXPLAIN ANALYZE findings against real query patterns
+CREATE INDEX idx_products_brand ON products (brand);
+CREATE INDEX idx_products_category ON products (category);
+CREATE INDEX idx_products_price ON products (price);
+CREATE INDEX idx_products_ram_price ON products (ram_gb, price);
