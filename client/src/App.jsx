@@ -1,10 +1,7 @@
+import ProductList from './pages/ProductList';
+
 function App() {
-  return (
-    <div>
-      <h1>Product Search & Comparison Engine</h1>
-      <p>Frontend scaffold is working.</p>
-    </div>
-  );
+  return <ProductList />;
 }
 
 export default App;
