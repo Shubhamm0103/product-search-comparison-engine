@@ -82,3 +82,22 @@ Frontend validation alone isn't trustworthy; whitelisting sort values closes off
 
 ### Status
 Accepted
+
+---
+
+## Decision: Backend testing strategy
+
+### Context
+The API needs automated tests instead of relying on manual curl checks, to prevent regressions as the project grows.
+
+### Decision
+Use Jest as the test runner and Supertest to send in-memory HTTP requests directly to the exported Express app (no separate running server needed for tests). Export `app` from app.js, guarding `app.listen()` behind `if (require.main === module)` so tests don't accidentally start a real server on a real port.
+
+### Why we chose this
+Supertest against an in-memory app is faster and more reliable than spinning up a real server for tests, and avoids port conflicts during test runs.
+
+### Evidence
+9 tests written covering success cases, filtering, sorting, and validation errors; all passing as of 2026-09-11 (see tests/products.test.js).
+
+### Status
+Accepted
