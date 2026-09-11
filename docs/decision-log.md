@@ -168,3 +168,16 @@ No cache invalidation beyond TTL — acceptable only because there are no write 
 
 ### Status
 Accepted
+
+---
+
+## Decision: Code review pass
+
+### Context
+Before final documentation and submission, reviewed the full codebase for dead code, inconsistent error handling, and accidentally committed secrets.
+
+### Findings
+Ran ESLint with --fix across the frontend; checked for stray console.log statements; confirmed .env files were never committed to git history (only .env.example); confirmed .gitignore correctly excludes node_modules and .env in both client/ and server/.
+
+### Status
+Accepted
