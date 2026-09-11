@@ -127,3 +127,22 @@ Every index adds a small write-time cost (index maintenance on INSERT/UPDATE) �
 
 ### Status
 Accepted — with `idx_products_ram_price`'s actual usefulness flagged for further investigation in Phase 23.
+
+---
+
+## Decision: Composite index (ram_gb, price) — when it's actually used
+
+### Context
+Phase 22 found idx_products_ram_price wasn't used for `ram_gb >= 16 ORDER BY price ASC LIMIT 20`, since ram_gb >= 16 matches most rows (low selectivity), so the planner preferred walking idx_products_price directly and filtering as it went.
+
+### Decision
+Kept the composite index — it IS used for more selective queries: `ram_gb >= 64` (fewer matching rows) and especially `ram_gb = 64` (equality), where the index is stored pre-sorted by (ram_gb, price), letting Postgres avoid a separate sort step entirely.
+
+### Evidence
+Confirmed via EXPLAIN ANALYZE: dropping the index for an equality+sort query reintroduced an explicit Sort node; recreating it removed that sort step, using the index directly.
+
+### Why this matters
+This demonstrates that composite indexes are chosen based on actual selectivity and query shape, not merely existence. A range filter over a majority of rows won't reliably trigger a composite index; an equality filter combined with a sort on the second column will.
+
+### Status
+Accepted
