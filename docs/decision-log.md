@@ -188,3 +188,22 @@ Ran ESLint with --fix across the frontend; checked for stray console.log stateme
 
 ### Status
 Accepted
+
+---
+
+## Decision: Real Wikipedia product photos per brand, cached client-side
+
+### Context
+Placeholder icons and generic stock photos didn't look like a real product catalog. However, the catalog is synthetic — specific model numbers (e.g. "DEL-7151") do not correspond to any real product, so no genuine photo of that exact model exists anywhere.
+
+### Decision
+Fetch the real Wikipedia photo of an actual real laptop line for each brand (e.g. the real Dell XPS photo for any Dell product, the real MacBook Pro photo for any Apple product) via Wikipedia's public REST API, cached once per brand in memory so repeated cards never refetch. Falls back to a colored SVG icon if the fetch fails or no image is available.
+
+### Why we chose this
+This is the most honest version of "real product images" achievable for a synthetic catalog: it shows genuine, real manufacturer product photography (via Wikipedia, not a random stock service) matched to the correct real brand — without falsely implying a specific fake model number has its own official photo, which is not physically possible since that exact model was never manufactured.
+
+### Tradeoffs
+Multiple synthetic products from the same brand share one representative photo (since brand, not fake model, is the real-world anchor). Requires a live fetch to Wikipedia on first load per brand; the module-level cache and SVG fallback keep this resilient if Wikipedia is unreachable.
+
+### Status
+Accepted

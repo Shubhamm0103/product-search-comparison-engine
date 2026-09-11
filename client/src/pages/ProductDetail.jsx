@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import ProductImage from '../components/ProductImage';
 
 function ProductDetail() {
   const { id } = useParams();
@@ -53,6 +54,7 @@ function ProductDetail() {
 
       {!loading && !error && product && (
         <div style={{ marginTop: '16px' }}>
+          <ProductImage product={product} size="detail" />
           <h1 style={{ marginBottom: '4px' }}>{product.brand} {product.model}</h1>
           <p style={{ color: '#666', marginTop: 0 }}>{product.category}</p>
           <p className="detail-price">₹{Number(product.price).toLocaleString('en-IN')}</p>

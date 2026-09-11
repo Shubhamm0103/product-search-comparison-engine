@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useCompare } from '../context/CompareContext';
+import ProductImage from './ProductImage';
 
 function ProductCard({ product }) {
   const { toggle, isSelected } = useCompare();
@@ -8,6 +9,7 @@ function ProductCard({ product }) {
   return (
     <div className={`product-card${selected ? ' selected' : ''}`}>
       <Link to={`/products/${product.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+        <ProductImage product={product} />
         <h3>{product.brand} {product.model}</h3>
         <p className="category">{product.category}</p>
         <p className="price">₹{Number(product.price).toLocaleString('en-IN')}</p>
