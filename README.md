@@ -1,15 +1,16 @@
 # Product Search & Comparison Engine
 
-A full-stack product search and comparison platform — search, filter, sort, paginate, and compare products side by side — built to demonstrate backend data/performance engineering, not just CRUD.
+A full-stack product search and comparison platform — search, filter, sort, paginate, and compare products side by side. Built to demonstrate backend data-engineering and API design skills, not just CRUD.
 
 ## What this project demonstrates
 
-- Search/filter/sort/pagination implemented as real, indexed SQL queries — not client-side array filtering
-- Query performance backed by actual EXPLAIN ANALYZE evidence, not assumptions (see docs/decision-log.md)
-- Redis caching (cache-aside pattern) with a proven cache-hit test, not just "it feels faster"
-- SQL-injection resistance proven by actually attempting an injection in a test, not just trusting parameterized queries
-- 20+ backend tests (Jest/Supertest) and frontend tests (Vitest/RTL) covering success paths, validation, security, and edge cases
-- Every non-trivial decision documented with context, alternatives considered, and evidence
+- Server-side search, filtering, sorting, and pagination implemented as real, parameterized SQL queries against PostgreSQL — not client-side array filtering
+- Query performance decisions backed by actual `EXPLAIN ANALYZE` output, including an honest account of where a composite index was *not* chosen by the planner and why (see `docs/decision-log.md`)
+- Redis caching using the cache-aside pattern, with a test that proves a cache hit by spying on the database query function — not just measuring response time
+- SQL-injection resistance verified with an automated test that actually attempts an injection string and confirms the table survives
+- A bulk comparison endpoint (`/api/products/compare?ids=...`) instead of one request per compared product
+- Deterministic sort ordering (a secondary `id` tie-breaker on every sort) so offset pagination never skips or duplicates rows
+- Backend and frontend test suites covering success paths, validation, security, and pagination edge cases
 
 ## Tech stack
 
@@ -21,11 +22,15 @@ A full-stack product search and comparison platform — search, filter, sort, pa
 | Cache | Redis |
 | Testing | Jest, Supertest (backend); Vitest, React Testing Library (frontend) |
 
-Deliberately excluded: Docker, TypeScript, auth, GraphQL, microservices, CI/CD — not because they're bad, but because they weren't needed to demonstrate the skills this project targets. See docs/decision-log.md for the full reasoning trail.
+Deliberately excluded: Docker, TypeScript, authentication, GraphQL, microservices, CI/CD — not because they're bad, but because they weren't needed to demonstrate the skills this project targets. See `docs/decision-log.md` for the reasoning behind each major decision.
+
+## Search implementation
+
+Search is implemented with PostgreSQL's `ILIKE` for case-insensitive substring matching across brand, model, and category. This is **not** a full-text search engine and does not provide fuzzy or typo-tolerant matching. A standard B-tree index cannot accelerate a leading-wildcard `ILIKE '%term%'` query — this is a documented, structural limitation, not an oversight (see the indexing entries in `docs/decision-log.md`). A `pg_trgm` trigram index would be the correct next step to address it, and was deliberately not added in this iteration to keep scope focused on the core demonstrated skills.
 
 ## Dataset
 
-~5,000 synthetically generated laptop product records (real brand names and processor families, prices correlated realistically with specs). This is explicitly not real market data — see the decision log for why synthetic data was chosen over a small real dataset.
+~5,000 synthetically generated laptop product records (real brand names and processor families; prices correlated realistically with specs). This is explicitly **not** real market data. Performance and indexing findings in this project apply to this ~5,000-row dataset and should not be read as claims about production-scale (millions-of-rows) performance.
 
 ## Project structure
 
@@ -42,11 +47,12 @@ Deliberately excluded: Docker, TypeScript, auth, GraphQL, microservices, CI/CD �
     |   |-- schema.sql          Table definition + indexes
     |   |-- generate-seed.js    Synthetic data generator
     |-- docs/
-        |-- decision-log.md     Every real engineering decision, with evidence
+        |-- decision-log.md     Engineering decisions, with evidence
 
 ## Setup
 
 ### Prerequisites
+
 - Node.js 18+
 - PostgreSQL 16+
 - Redis 7+
@@ -65,7 +71,7 @@ Deliberately excluded: Docker, TypeScript, auth, GraphQL, microservices, CI/CD �
     cp .env.example .env
     node src/app.js
 
-Runs on http://localhost:5000.
+The backend listens on the port set in `.env` (`PORT`, default `5000`). Once running, it is reachable **only on your own machine** at `http://localhost:5000` — this address is not a public link and will not open from GitHub or any other computer.
 
 ### Frontend
 
@@ -73,7 +79,14 @@ Runs on http://localhost:5000.
     npm install
     npm run dev
 
-Runs on http://localhost:5173.
+Vite will print the local URL it's running on (typically `http://localhost:5173`, but it may pick a different port if that one is in use — check your terminal output for the actual address). Like the backend, this only works while `npm run dev` is running on your machine.
+
+## Live Demo
+
+- **Frontend**: https://YOUR-VERCEL-URL-HERE
+- **Backend API**: https://product-search-backend-l12m.onrender.com/api
+
+> Note: the backend is on Render's free tier, which spins down after inactivity — the first request after idle time may take 30-60 seconds to respond while it wakes up.
 
 ## Running tests
 
@@ -82,11 +95,14 @@ Runs on http://localhost:5173.
 
 ## API
 
-GET /api/products — search/filter/sort/paginate. Query params: q, brand, category, minPrice, maxPrice, minRam, sort (newest|price_asc|price_desc|rating_desc), page, limit.
+`GET /api/products` — search/filter/sort/paginate.
+Query params: `q`, `brand`, `category`, `minPrice`, `maxPrice`, `minRam`, `sort` (`newest`|`price_asc`|`price_desc`|`rating_desc`), `page`, `limit`.
 
-GET /api/products/:id — single product.
+`GET /api/products/:id` — single product.
 
-Response shape:
+`GET /api/products/compare?ids=1,2,3,4` — bulk fetch for the comparison feature (up to 4 ids), backed by a single parameterized query.
+
+Response shape for the list endpoint:
 
     {
       "data": [ ... ],
@@ -95,4 +111,4 @@ Response shape:
 
 ## Engineering decisions
 
-Every non-trivial choice made in this project is documented with evidence in docs/decision-log.md.
+Every non-trivial technical choice in this project — schema design, synthetic data strategy, API response shape, indexing decisions backed by real `EXPLAIN ANALYZE` output, caching strategy, and test coverage rationale — is documented with evidence in [`docs/decision-log.md`](docs/decision-log.md).
