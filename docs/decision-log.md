@@ -48,3 +48,37 @@ Generator run on 2026-09-11 produced exactly 5,000 rows, verified via `SELECT CO
 
 ### Status
 Accepted
+---
+
+## Decision: API response structure for GET /api/products
+
+### Context
+The products listing endpoint needs to return both product data and pagination metadata in a predictable shape.
+
+### Decision
+Response has two top-level keys: `data` (array of products) and `pagination` (page, limit, total, totalPages).
+
+### Why we chose this
+Clear separation between actual payload and request/response metadata; predictable for the frontend to destructure.
+
+### Evidence
+Implemented in server/src/services/productService.js and productController.js; verified via curl against the live seeded database (5000 products) on 2026-09-11.
+
+### Status
+Accepted
+
+---
+
+## Decision: Query parameter validation strategy
+
+### Context
+API accepts several optional query params that must never be trusted blindly.
+
+### Decision
+All query params validated server-side before touching the database; `sort` values matched against a whitelist rather than ever interpolated directly into SQL.
+
+### Why we chose this
+Frontend validation alone isn't trustworthy; whitelisting sort values closes off SQL injection risk through that parameter.
+
+### Status
+Accepted
