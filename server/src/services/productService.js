@@ -1,14 +1,20 @@
 const pool = require('../db/pool');
 const redisClient = require('../db/redisClient');
 
+// Every sort now has a deterministic secondary key (id) so that rows with
+// tied primary values (e.g. same price) always resolve in the same order
+// across requests. Without this, offset pagination can skip or duplicate
+// rows when ties are present, since the database is free to return tied
+// rows in any order on each execution.
 const ALLOWED_SORTS = {
-  price_asc: 'price ASC',
-  price_desc: 'price DESC',
-  rating_desc: 'rating DESC',
-  newest: 'created_at DESC',
+  price_asc: 'price ASC, id ASC',
+  price_desc: 'price DESC, id ASC',
+  rating_desc: 'rating DESC, id ASC',
+  newest: 'created_at DESC, id DESC',
 };
 
 const CACHE_TTL_SECONDS = 60;
+const MAX_COMPARE_IDS = 4;
 
 function buildCacheKey(filters) {
   const sortedEntries = Object.entries(filters)
@@ -114,4 +120,20 @@ async function getProductById(id) {
   return result.rows[0] || null;
 }
 
-module.exports = { getProducts, getProductById };
+// Bulk fetch for the comparison feature — replaces N separate single-product
+// requests with one parameterized query. Order of returned rows is not
+// guaranteed to match the input id order, so callers that need a specific
+// order should re-sort client-side by id.
+async function getProductsByIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const limitedIds = ids.slice(0, MAX_COMPARE_IDS);
+
+  const result = await pool.query(
+    'SELECT * FROM products WHERE id = ANY($1::int[])',
+    [limitedIds]
+  );
+  return result.rows;
+}
+
+module.exports = { getProducts, getProductById, getProductsByIds };
