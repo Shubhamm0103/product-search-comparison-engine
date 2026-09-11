@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import ProductCard from '../components/ProductCard';
 import Filters from '../components/Filters';
@@ -6,17 +7,27 @@ import SortSelect from '../components/SortSelect';
 import Pagination from '../components/Pagination';
 
 const PAGE_SIZE = 20;
+const FILTER_KEYS = ['brand', 'category', 'minPrice', 'maxPrice', 'minRam'];
 
 function ProductList() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState({});
-  const [sort, setSort] = useState('newest');
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Derive everything from the URL — no separate useState for these
+  const query = searchParams.get('q') || '';
+  const sort = searchParams.get('sort') || 'newest';
+  const page = Number(searchParams.get('page')) || 1;
+  const filters = {};
+  FILTER_KEYS.forEach(key => {
+    const val = searchParams.get(key);
+    if (val) filters[key] = val;
+  });
+
+  // Local-only state for the search box text, so typing doesn't hit the URL until Search is pressed
+  const [searchInput, setSearchInput] = useState(query);
 
   useEffect(() => {
     let isCancelled = false;
@@ -47,16 +58,38 @@ function ProductList() {
       });
 
     return () => { isCancelled = true; };
-  }, [query, filters, sort, page]);
+  }, [searchParams]);
 
-  // Any time search/filters/sort change, snap back to page 1
-  useEffect(() => {
-    setPage(1);
-  }, [query, filters, sort]);
+  function updateParams(updates, resetPage = true) {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === '') {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+    });
+    if (resetPage) next.delete('page');
+    setSearchParams(next);
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
-    setQuery(searchInput);
+    updateParams({ q: searchInput || undefined });
+  }
+
+  function handleFiltersChange(newFilters) {
+    const updates = {};
+    FILTER_KEYS.forEach(key => { updates[key] = newFilters[key]; });
+    updateParams(updates);
+  }
+
+  function handleSortChange(newSort) {
+    updateParams({ sort: newSort });
+  }
+
+  function handlePageChange(newPage) {
+    updateParams({ page: newPage }, false);
   }
 
   return (
@@ -75,8 +108,8 @@ function ProductList() {
       </form>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-        <Filters filters={filters} onChange={setFilters} />
-        <SortSelect value={sort} onChange={setSort} />
+        <Filters filters={filters} onChange={handleFiltersChange} />
+        <SortSelect value={sort} onChange={handleSortChange} />
       </div>
 
       {loading && <p>Loading products...</p>}
@@ -98,7 +131,7 @@ function ProductList() {
         ))}
       </div>
 
-      <Pagination page={page} pagination={pagination} onPageChange={setPage} />
+      <Pagination page={page} pagination={pagination} onPageChange={handlePageChange} />
     </div>
   );
 }
