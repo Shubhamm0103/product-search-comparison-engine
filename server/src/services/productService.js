@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const redisClient = require('../db/redisClient');
 
 const ALLOWED_SORTS = {
   price_asc: 'price ASC',
@@ -7,8 +8,32 @@ const ALLOWED_SORTS = {
   newest: 'created_at DESC',
 };
 
+const CACHE_TTL_SECONDS = 60;
+
+function buildCacheKey(filters) {
+  const sortedEntries = Object.entries(filters)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .sort(([a], [b]) => a.localeCompare(b));
+  const normalized = sortedEntries.map(([k, v]) => `${k}=${v}`).join('&');
+  return `products:list:${normalized || 'all'}`;
+}
+
 async function getProducts(filters) {
-  const { q, brand, category, minPrice, maxPrice, minRam, sort, page, limit } = filters;
+  const cacheKey = buildCacheKey(filters);
+
+  try {
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (err) {
+    console.error('Redis read error (falling back to DB):', err);
+  }
+
+  const {
+    q, brand, category, minPrice, maxPrice, minRam, sort, page, limit,
+  } = filters;
+
   const conditions = [];
   const values = [];
   let paramIndex = 1;
@@ -59,6 +84,7 @@ async function getProducts(filters) {
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `;
   const dataValues = [...values, limit, offset];
+
   const countQuery = `SELECT COUNT(*) FROM products ${whereClause}`;
   const countValues = values;
 
@@ -69,10 +95,18 @@ async function getProducts(filters) {
 
   const total = parseInt(countResult.rows[0].count, 10);
 
-  return {
+  const result = {
     data: dataResult.rows,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
+
+  try {
+    await redisClient.setEx(cacheKey, CACHE_TTL_SECONDS, JSON.stringify(result));
+  } catch (err) {
+    console.error('Redis write error (continuing without cache):', err);
+  }
+
+  return result;
 }
 
 async function getProductById(id) {

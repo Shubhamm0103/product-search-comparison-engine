@@ -146,3 +146,25 @@ This demonstrates that composite indexes are chosen based on actual selectivity 
 
 ### Status
 Accepted
+
+---
+
+## Decision: Redis caching strategy for GET /api/products
+
+### Context
+Search/filter/sort queries are read-heavy and often repeated (same popular filters hit again and again). Caching avoids redundant identical database work.
+
+### Decision
+Cache-aside pattern: check Redis before querying Postgres; on miss, query Postgres and populate Redis with a 60-second TTL. Cache key is built by sorting all active filter params alphabetically and joining them, so param order never produces a false cache miss. Only GET /api/products (list) is cached — no write endpoints exist in this project, so no invalidation logic was needed beyond TTL expiry.
+
+### Why we chose this
+Cache-aside is simple, well-understood, and appropriate for a read-heavy, write-rare workload. A 60-second TTL balances "meaningfully reduces DB load under repeated searches" against "stale data risk," which is low here since our dataset is static/synthetic.
+
+### Evidence
+Verified via Jest: repeated identical requests return identical data, and a `pool.query` spy confirms the second identical request does NOT re-query Postgres (see tests/cache.test.js). Different filter combinations were confirmed to produce different cache keys (no false hits).
+
+### Tradeoffs
+No cache invalidation beyond TTL — acceptable only because there are no write endpoints. If this project added product updates later, this caching layer would need explicit invalidation on write, which is a real limitation we're flagging now rather than over-engineering for a feature that doesn't exist yet. Redis read/write failures are caught and logged rather than crashing requests — caching is an optimization, not a hard dependency.
+
+### Status
+Accepted
