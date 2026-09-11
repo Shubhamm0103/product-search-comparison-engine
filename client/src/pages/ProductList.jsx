@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard';
 import Filters from '../components/Filters';
 import SortSelect from '../components/SortSelect';
 import Pagination from '../components/Pagination';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const PAGE_SIZE = 20;
 const FILTER_KEYS = ['brand', 'category', 'minPrice', 'maxPrice', 'minRam'];
@@ -16,7 +17,6 @@ function ProductList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Derive everything from the URL — no separate useState for these
   const query = searchParams.get('q') || '';
   const sort = searchParams.get('sort') || 'newest';
   const page = Number(searchParams.get('page')) || 1;
@@ -26,8 +26,37 @@ function ProductList() {
     if (val) filters[key] = val;
   });
 
-  // Local-only state for the search box text, so typing doesn't hit the URL until Search is pressed
+  // Local input state — typing updates this instantly (snappy UI),
+  // but the URL/API only get the debounced version
   const [searchInput, setSearchInput] = useState(query);
+  const debouncedSearchInput = useDebouncedValue(searchInput, 400);
+
+  const [priceInputs, setPriceInputs] = useState({
+    minPrice: filters.minPrice || '',
+    maxPrice: filters.maxPrice || '',
+  });
+  const debouncedPriceInputs = useDebouncedValue(priceInputs, 400);
+
+  // When the debounced search value settles, push it to the URL
+  useEffect(() => {
+    if (debouncedSearchInput === query) return;
+    updateParams({ q: debouncedSearchInput || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchInput]);
+
+  // When debounced price values settle, push them to the URL
+  useEffect(() => {
+    const current = { minPrice: filters.minPrice || '', maxPrice: filters.maxPrice || '' };
+    if (
+      debouncedPriceInputs.minPrice === current.minPrice &&
+      debouncedPriceInputs.maxPrice === current.maxPrice
+    ) return;
+    updateParams({
+      minPrice: debouncedPriceInputs.minPrice || undefined,
+      maxPrice: debouncedPriceInputs.maxPrice || undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedPriceInputs]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -73,15 +102,18 @@ function ProductList() {
     setSearchParams(next);
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    updateParams({ q: searchInput || undefined });
-  }
-
   function handleFiltersChange(newFilters) {
-    const updates = {};
-    FILTER_KEYS.forEach(key => { updates[key] = newFilters[key]; });
-    updateParams(updates);
+    // brand/category/minRam go straight to the URL (they're discrete selects, no debounce needed)
+    updateParams({
+      brand: newFilters.brand,
+      category: newFilters.category,
+      minRam: newFilters.minRam,
+    });
+    // price stays in local debounced state
+    setPriceInputs({
+      minPrice: newFilters.minPrice || '',
+      maxPrice: newFilters.maxPrice || '',
+    });
   }
 
   function handleSortChange(newSort) {
@@ -96,19 +128,16 @@ function ProductList() {
     <div style={{ padding: '24px' }}>
       <h1>Product Search & Comparison</h1>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="Search brand, model, or category..."
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          style={{ padding: '8px', width: '300px', marginRight: '8px' }}
-        />
-        <button type="submit" style={{ padding: '8px 16px' }}>Search</button>
-      </form>
+      <input
+        type="text"
+        placeholder="Search brand, model, or category..."
+        value={searchInput}
+        onChange={e => setSearchInput(e.target.value)}
+        style={{ padding: '8px', width: '300px', marginBottom: '20px' }}
+      />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-        <Filters filters={filters} onChange={handleFiltersChange} />
+        <Filters filters={{ ...filters, ...priceInputs }} onChange={handleFiltersChange} />
         <SortSelect value={sort} onChange={handleSortChange} />
       </div>
 
