@@ -81,13 +81,6 @@ The backend listens on the port set in `.env` (`PORT`, default `5000`). Once run
 
 Vite will print the local URL it's running on (typically `http://localhost:5173`, but it may pick a different port if that one is in use — check your terminal output for the actual address). Like the backend, this only works while `npm run dev` is running on your machine.
 
-## Live Demo
-
-- **Frontend**: https://YOUR-VERCEL-URL-HERE
-- **Backend API**: https://product-search-backend-l12m.onrender.com/api
-
-> Note: the backend is on Render's free tier, which spins down after inactivity — the first request after idle time may take 30-60 seconds to respond while it wakes up.
-
 ## Running tests
 
     cd server && npm test
